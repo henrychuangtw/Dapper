@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Data;
 using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Dapper.Tests
 {
-    public class ProcedureTests : TestBase
+    [Collection("ProcedureTests")]
+    public sealed class SystemSqlClientProcedureTests : ProcedureTests<SystemSqlClientProvider> { }
+#if MSSQLCLIENT
+    [Collection("ProcedureTests")]
+    public sealed class MicrosoftSqlClientProcedureTests : ProcedureTests<MicrosoftSqlClientProvider> { }
+#endif
+    public abstract class ProcedureTests<TProvider> : TestBase<TProvider> where TProvider : DatabaseProvider
     {
         [Fact]
         public void TestProcWithOutParameter()
@@ -105,9 +112,7 @@ namespace Dapper.Tests
         private class PracticeRebateOrders
         {
             public string fTaxInvoiceNumber;
-#if !NETCOREAPP1_0
             [System.Xml.Serialization.XmlElement(Form = System.Xml.Schema.XmlSchemaForm.Unqualified)]
-#endif
             public string TaxInvoiceNumber
             {
                 get { return fTaxInvoiceNumber; }
@@ -219,7 +224,7 @@ namespace Dapper.Tests
             Assert.Equal(datetime2, p.Get<DateTime>("b"));
         }
 
-        [Theory()]
+        [Theory]
         [InlineData(null)]
         [InlineData(DbType.DateTime)]
         public void TestDateTime2LosePrecisionInDynamicParameters(DbType? dbType)
@@ -253,6 +258,28 @@ namespace Dapper.Tests
 
             // @b gets set to datetime2 value but is truncated back to DbType.DateTime by DynamicParameter's Output declaration
             Assert.Equal(datetimeDefault, p.Get<DateTime>("b"));
+        }
+
+
+        [Fact]
+        public async Task Issue591_NoResultsAsync()
+        {
+            const string tempSPName = "#" + nameof(Issue591_NoResultsAsync);
+
+            var result = await connection.QueryAsync(
+            $@"create proc {tempSPName}
+            as 
+            begin
+                -- basically a failed if statement, so the select is not happening and the stored proc return nothing
+                if 1=0
+                begin
+                    select 1 as Num
+                end
+            end
+            
+            exec {tempSPName}");
+
+            Assert.Empty(result);
         }
     }
 }

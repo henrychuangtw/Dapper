@@ -5,7 +5,13 @@ using Xunit;
 
 namespace Dapper.Tests
 {
-    public class DecimalTests : TestBase
+    [Collection("DecimalTests")]
+    public sealed class SystemSqlClientDecimalTests : DecimalTests<SystemSqlClientProvider> { }
+#if MSSQLCLIENT
+    [Collection("DecimalTests")]
+    public sealed class MicrosoftSqlClientDecimalTests : DecimalTests<MicrosoftSqlClientProvider> { }
+#endif
+    public abstract class DecimalTests<TProvider> : TestBase<TProvider> where TProvider : DatabaseProvider
     {
         [Fact]
         public void Issue261_Decimals()
@@ -77,10 +83,10 @@ namespace Dapper.Tests
         {
             var row = connection.Query<HasDoubleDecimal>(
                 "select cast(1 as float) as A, cast(2 as float) as B, cast(3 as decimal) as C, cast(4 as decimal) as D").Single();
-            row.A.Equals(1.0);
-            row.B.Equals(2.0);
-            row.C.Equals(3.0M);
-            row.D.Equals(4.0M);
+            Assert.Equal(1.0, row.A);
+            Assert.Equal(2.0, row.B);
+            Assert.Equal(3.0M, row.C);
+            Assert.Equal(4.0M, row.D);
         }
 
         [Fact]
@@ -88,10 +94,10 @@ namespace Dapper.Tests
         {
             var row = connection.Query<HasDoubleDecimal>(
                 "select cast(1 as decimal) as A, cast(2 as decimal) as B, cast(3 as float) as C, cast(4 as float) as D").Single();
-            row.A.Equals(1.0);
-            row.B.Equals(2.0);
-            row.C.Equals(3.0M);
-            row.D.Equals(4.0M);
+            Assert.Equal(1.0, row.A);
+            Assert.Equal(2.0, row.B);
+            Assert.Equal(3.0M, row.C);
+            Assert.Equal(4.0M, row.D);
         }
 
         [Fact]
@@ -99,9 +105,9 @@ namespace Dapper.Tests
         {
             var row = connection.Query<HasDoubleDecimal>(
                 "select cast(null as decimal) as A, cast(null as decimal) as B, cast(null as float) as C, cast(null as float) as D").Single();
-            row.A.Equals(0.0);
+            Assert.Equal(0.0, row.A);
             Assert.Null(row.B);
-            row.C.Equals(0.0M);
+            Assert.Equal(0.0M, row.C);
             Assert.Null(row.D);
         }
 

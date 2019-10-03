@@ -9,7 +9,13 @@ using Xunit;
 namespace Dapper.Tests
 {
     [Collection(NonParallelDefinition.Name)]
-    public class TypeHandlerTests : TestBase
+    public sealed class SystemSqlClientTypeHandlerTests : TypeHandlerTests<SystemSqlClientProvider> { }
+#if MSSQLCLIENT
+    [Collection(NonParallelDefinition.Name)]
+    public sealed class MicrosoftSqlClientTypeHandlerTests : TypeHandlerTests<MicrosoftSqlClientProvider> { }
+#endif
+
+    public abstract class TypeHandlerTests<TProvider> : TestBase<TProvider> where TProvider : DatabaseProvider
     {
         [Fact]
         public void TestChangingDefaultStringTypeMappingToAnsiString()
@@ -76,13 +82,8 @@ namespace Dapper.Tests
         private static string GetDescriptionFromAttribute(MemberInfo member)
         {
             if (member == null) return null;
-#if NETCOREAPP1_0
-        var data = member.CustomAttributes.FirstOrDefault(x => x.AttributeType == typeof(DescriptionAttribute));
-        return (string)data?.ConstructorArguments.Single().Value;
-#else
             var attrib = (DescriptionAttribute)Attribute.GetCustomAttribute(member, typeof(DescriptionAttribute), false);
             return attrib?.Description;
-#endif
         }
 
         public class TypeWithMapping
@@ -576,20 +577,27 @@ namespace Dapper.Tests
         public void TestWrongTypes_WithRightTypes()
         {
             var item = connection.Query<WrongTypes>("select 1 as A, cast(2.0 as float) as B, cast(3 as bigint) as C, cast(1 as bit) as D").Single();
-            item.A.Equals(1);
-            item.B.Equals(2.0);
-            item.C.Equals(3L);
-            item.D.Equals(true);
+            Assert.Equal(1, item.A);
+            Assert.Equal(2.0, item.B);
+            Assert.Equal(3L, item.C);
+            Assert.True(item.D);
         }
 
         [Fact]
         public void TestWrongTypes_WithWrongTypes()
         {
             var item = connection.Query<WrongTypes>("select cast(1.0 as float) as A, 2 as B, 3 as C, cast(1 as bigint) as D").Single();
-            item.A.Equals(1);
-            item.B.Equals(2.0);
-            item.C.Equals(3L);
-            item.D.Equals(true);
+            Assert.Equal(1, item.A);
+            Assert.Equal(2.0, item.B);
+            Assert.Equal(3L, item.C);
+            Assert.True(item.D);
+        }
+
+        [Fact]
+        public void TestTreatIntAsABool()
+        {
+            Assert.True(connection.Query<bool>("select CAST(1 AS BIT)").Single());
+            Assert.True(connection.Query<bool>("select 1").Single());
         }
 
         [Fact]

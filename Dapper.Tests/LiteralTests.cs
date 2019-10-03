@@ -3,7 +3,13 @@ using Xunit;
 
 namespace Dapper.Tests
 {
-    public class LiteralTests : TestBase
+    [Collection("LiteralTests")]
+    public sealed class SystemSqlClientLiteralTests : LiteralTests<SystemSqlClientProvider> { }
+#if MSSQLCLIENT
+    [Collection("LiteralTests")]
+    public sealed class MicrosoftSqlClientLiteralTests : LiteralTests<MicrosoftSqlClientProvider> { }
+#endif
+    public abstract class LiteralTests<TProvider> : TestBase<TProvider> where TProvider : DatabaseProvider
     {
         [Fact]
         public void LiteralReplacementEnumAndString()
@@ -13,9 +19,9 @@ namespace Dapper.Tests
             AnEnum x = (AnEnum)(int)row.x;
             decimal y = row.y;
             AnotherEnum z = (AnotherEnum)(byte)row.z;
-            x.Equals(AnEnum.B);
-            y.Equals(123.45M);
-            z.Equals(AnotherEnum.A);
+            Assert.Equal(AnEnum.B, x);
+            Assert.Equal(123.45M, y);
+            Assert.Equal(AnotherEnum.A, z);
         }
 
         [Fact]
@@ -29,9 +35,9 @@ namespace Dapper.Tests
             AnEnum x = (AnEnum)(int)row.x;
             decimal y = row.y;
             AnotherEnum z = (AnotherEnum)(byte)row.z;
-            x.Equals(AnEnum.B);
-            y.Equals(123.45M);
-            z.Equals(AnotherEnum.A);
+            Assert.Equal(AnEnum.B, x);
+            Assert.Equal(123.45M, y);
+            Assert.Equal(AnotherEnum.A, z);
         }
 
         [Fact]

@@ -7,10 +7,6 @@ using System.IO;
 using Xunit;
 using Xunit.Sdk;
 
-#if !NETCOREAPP1_0 && !NETCOREAPP2_0
-using System.Data.SqlServerCe;
-#endif
-
 namespace Dapper.Tests.Contrib
 {
     // The test suites here implement TestSuiteBase so that each provider runs
@@ -37,7 +33,7 @@ namespace Dapper.Tests.Contrib
             using (var connection = new SqlConnection(ConnectionString))
             {
                 // ReSharper disable once AccessToDisposedClosure
-                Action<string> dropTable = name => connection.Execute($"IF OBJECT_ID('{name}', 'U') IS NOT NULL DROP TABLE [{name}]; ");
+                void dropTable(string name) => connection.Execute($"IF OBJECT_ID('{name}', 'U') IS NOT NULL DROP TABLE [{name}]; ");
                 connection.Open();
                 dropTable("Stuff");
                 connection.Execute("CREATE TABLE Stuff (TheId int IDENTITY(1,1) not null, Name nvarchar(100) not null, Created DateTime null);");
@@ -57,22 +53,22 @@ namespace Dapper.Tests.Contrib
                 connection.Execute("CREATE TABLE ObjectZ (Id int not null, Name nvarchar(100) not null);");
                 dropTable("GenericType");
                 connection.Execute("CREATE TABLE GenericType (Id nvarchar(100) not null, Name nvarchar(100) not null);");
+                dropTable("NullableDates");
+                connection.Execute("CREATE TABLE NullableDates (Id int IDENTITY(1,1) not null, DateValue DateTime null);");
             }
         }
     }
 
     public class MySqlServerTestSuite : TestSuite
     {
-        private const string DbName = "DapperContribTests";
-
         public static string ConnectionString { get; } =
             IsAppVeyor
-                ? "Server=localhost;Uid=root;Pwd=Password12!;"
-                : "Server=localhost;Uid=test;Pwd=pass;";
+                ? "Server=localhost;Database=test;Uid=root;Pwd=Password12!;UseAffectedRows=false;"
+                : "Server=localhost;Database=tests;Uid=test;Pwd=pass;UseAffectedRows=false;";
 
         public override IDbConnection GetConnection()
         {
-            if (_skip) throw new SkipTestException("Skipping MySQL Tests - no server.");
+            if (_skip) Skip.Inconclusive("Skipping MySQL Tests - no server.");
             return new MySqlConnection(ConnectionString);
         }
 
@@ -85,9 +81,8 @@ namespace Dapper.Tests.Contrib
                 using (var connection = new MySqlConnection(ConnectionString))
                 {
                     // ReSharper disable once AccessToDisposedClosure
-                    Action<string> dropTable = name => connection.Execute($"DROP TABLE IF EXISTS `{name}`;");
+                    void dropTable(string name) => connection.Execute($"DROP TABLE IF EXISTS `{name}`;");
                     connection.Open();
-                    connection.Execute($"DROP DATABASE IF EXISTS {DbName}; CREATE DATABASE {DbName}; USE {DbName};");
                     dropTable("Stuff");
                     connection.Execute("CREATE TABLE Stuff (TheId int not null AUTO_INCREMENT PRIMARY KEY, Name nvarchar(100) not null, Created DateTime null);");
                     dropTable("People");
@@ -106,6 +101,8 @@ namespace Dapper.Tests.Contrib
                     connection.Execute("CREATE TABLE ObjectZ (Id int not null, Name nvarchar(100) not null);");
                     dropTable("GenericType");
                     connection.Execute("CREATE TABLE GenericType (Id nvarchar(100) not null, Name nvarchar(100) not null);");
+                    dropTable("NullableDates");
+                    connection.Execute("CREATE TABLE NullableDates (Id int not null AUTO_INCREMENT PRIMARY KEY, DateValue DateTime);");
                 }
             }
             catch (MySqlException e)
@@ -142,11 +139,13 @@ namespace Dapper.Tests.Contrib
                 connection.Execute("CREATE TABLE ObjectY (ObjectYId integer not null, Name nvarchar(100) not null) ");
                 connection.Execute("CREATE TABLE ObjectZ (Id integer not null, Name nvarchar(100) not null) ");
                 connection.Execute("CREATE TABLE GenericType (Id nvarchar(100) not null, Name nvarchar(100) not null) ");
+                connection.Execute("CREATE TABLE NullableDates (Id integer primary key autoincrement not null, DateValue DateTime) ");
             }
         }
     }
 
-#if !NETCOREAPP1_0 && !NETCOREAPP2_0
+
+#if SQLCE
     public class SqlCETestSuite : TestSuite
     {
         const string FileName = "Test.DB.sdf";
@@ -173,6 +172,7 @@ namespace Dapper.Tests.Contrib
                 connection.Execute(@"CREATE TABLE ObjectY (ObjectYId int not null, Name nvarchar(100) not null) ");
                 connection.Execute(@"CREATE TABLE ObjectZ (Id int not null, Name nvarchar(100) not null) ");
                 connection.Execute(@"CREATE TABLE GenericType (Id nvarchar(100) not null, Name nvarchar(100) not null) ");
+                connection.Execute(@"CREATE TABLE NullableDates (Id int IDENTITY(1,1) not null, DateValue DateTime null) ");
             }
             Console.WriteLine("Created database");
         }

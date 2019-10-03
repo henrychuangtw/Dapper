@@ -6,7 +6,13 @@ using Xunit;
 
 namespace Dapper.Tests
 {
-    public class MultiMapTests : TestBase
+    [Collection("MultiMapTests")]
+    public sealed class SystemSqlClientMultiMapTests : MultiMapTests<SystemSqlClientProvider> { }
+#if MSSQLCLIENT
+    [Collection("MultiMapTests")]
+    public sealed class MicrosoftSqlClientMultiMapTests : MultiMapTests<MicrosoftSqlClientProvider> { }
+#endif
+    public abstract class MultiMapTests<TProvider> : TestBase<TProvider> where TProvider : DatabaseProvider
     {
         [Fact]
         public void ParentChildIdentityAssociations()
@@ -599,15 +605,15 @@ Order by p.Id
             (T, P) => { T.Author = P; return T; },
             null, null, true, "ID,Name").Single();
 
-            result.ID.Equals(123);
-            result.Title.Equals("abc");
-            result.CreateDate.Equals(new DateTime(2013, 2, 1));
+            Assert.Equal(123, result.ID);
+            Assert.Equal("abc", result.Title);
+            Assert.Equal(new DateTime(2013, 2, 1), result.CreateDate);
             Assert.Null(result.Name);
             Assert.Null(result.Content);
 
-            result.Author.Phone.Equals("def");
-            result.Author.Name.Equals("ghi");
-            result.Author.ID.Equals(0);
+            Assert.Equal("def", result.Author.Phone);
+            Assert.Equal("ghi", result.Author.Name);
+            Assert.Equal(0, result.Author.ID);
             Assert.Null(result.Author.Address);
         }
 

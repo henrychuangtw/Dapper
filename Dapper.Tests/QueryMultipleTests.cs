@@ -6,7 +6,13 @@ using Xunit;
 
 namespace Dapper.Tests
 {
-    public class QueryMultipleTests : TestBase
+    [Collection("QueryMultipleTests")]
+    public sealed class SystemSqlClientQueryMultipleTests : QueryMultipleTests<SystemSqlClientProvider> { }
+#if MSSQLCLIENT
+    [Collection("QueryMultipleTests")]
+    public sealed class MicrosoftSqlClientQueryMultipleTests : QueryMultipleTests<MicrosoftSqlClientProvider> { }
+#endif
+    public abstract class QueryMultipleTests<TProvider> : TestBase<TProvider> where TProvider : DatabaseProvider
     {
         [Fact]
         public void TestQueryMultipleBuffered()
@@ -18,10 +24,10 @@ namespace Dapper.Tests
                 var c = grid.Read<int>();
                 var d = grid.Read<int>();
 
-                a.Single().Equals(1);
-                b.Single().Equals(2);
-                c.Single().Equals(3);
-                d.Single().Equals(4);
+                Assert.Equal(1, a.Single());
+                Assert.Equal(2, b.Single());
+                Assert.Equal(3, c.Single());
+                Assert.Equal(4, d.Single());
             }
         }
 
@@ -53,10 +59,10 @@ namespace Dapper.Tests
                 var c = grid.Read<int>(false).Single();
                 var d = grid.Read<int>(false).Single();
 
-                a.Equals(1);
-                b.Equals(2);
-                c.Equals(3);
-                d.Equals(4);
+                Assert.Equal(1, a);
+                Assert.Equal(2, b);
+                Assert.Equal(3, c);
+                Assert.Equal(4, d);
             }
         }
 
